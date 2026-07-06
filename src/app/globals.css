@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --paper: #eee7d8;
+  --paper-deep: #e3dac5;
+  --ink: #232017;
+  --ink-soft: #5b5646;
+  --rule: #cabf9f;
+  --accent: #3f5d4e;      /* ledger green */
+  --accent-soft: #7c9b8b;
+  --gold: #a8783a;        /* stamp gold */
+  --gold-soft: #d8b98a;
+  --male-fill: #cfe3f2;
+  --male-ink: #35617f;
+  --female-fill: #f4d9e2;
+  --female-ink: #9c4f68;
+}
+
+body {
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  background-image:
+    linear-gradient(var(--rule) 1px, transparent 1px);
+  background-size: 100% 2.1rem;
+  background-attachment: local;
+}
+
+.font-display {
+  font-family: var(--font-display), Georgia, serif;
+}
+
+.font-mono {
+  font-family: var(--font-mono), ui-monospace, monospace;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* React Flow canvas overrides so it fits the ledger aesthetic */
+.react-flow__attribution {
+  display: none;
+}
+.react-flow__edge-path {
+  stroke: var(--ink-soft);
+  stroke-width: 1.6;
+}
+.react-flow__edge.marriage .react-flow__edge-path {
+  stroke: var(--gold);
+  stroke-dasharray: 4 3;
+}

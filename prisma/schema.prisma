@@ -1,0 +1,146 @@
+// Family Tree — Prisma schema
+// Designed for Neon Postgres (Vercel's free Postgres integration)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum SystemRole {
+  ADMIN
+  USER
+}
+
+enum TreeRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+enum Sex {
+  MALE
+  FEMALE
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  passwordHash  String
+  systemRole    SystemRole @default(USER)
+  createdAt     DateTime @default(now())
+
+  memberships   TreeMember[]
+  sentInvites   Invite[]     @relation("InviteSender")
+  createdNodes  PersonNode[] @relation("NodeCreator")
+}
+
+// A single family tree. Owned by the creator, editable by invited members.
+model Tree {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     TreeMember[]
+  nodes       PersonNode[]
+  invites     Invite[]
+}
+
+// Join table: which users can access which trees, and with what permission.
+model TreeMember {
+  id       String   @id @default(cuid())
+  treeId   String
+  userId   String
+  role     TreeRole @default(EDITOR)
+  joinedAt DateTime @default(now())
+
+  tree     Tree     @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([treeId, userId])
+}
+
+// Pending or resolved invitations to collaborate on a tree.
+model Invite {
+  id         String       @id @default(cuid())
+  treeId     String
+  email      String
+  role       TreeRole     @default(EDITOR)
+  status     InviteStatus @default(PENDING)
+  token      String       @unique @default(cuid())
+  invitedById String
+  createdAt  DateTime     @default(now())
+
+  tree       Tree         @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  invitedBy  User         @relation("InviteSender", fields: [invitedById], references: [id])
+
+  @@index([email])
+}
+
+// A single person in a tree.
+model PersonNode {
+  id            String   @id @default(cuid())
+  treeId        String
+  name          String
+  sex           Sex
+  birthYear     Int?
+  deathYear     Int?
+  notes         String?
+  createdById   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tree          Tree     @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  createdBy     User     @relation("NodeCreator", fields: [createdById], references: [id])
+
+  // Parent-child edges where this node is the CHILD (max 2 enforced in app logic)
+  parentLinks   ParentChild[] @relation("ChildLinks")
+  // Parent-child edges where this node is the PARENT
+  childLinks    ParentChild[] @relation("ParentLinks")
+
+  // Marriages where this node is the husband
+  marriagesAsHusband Marriage[] @relation("Husband")
+  // Marriages where this node is the wife
+  marriagesAsWife    Marriage[] @relation("Wife")
+
+  @@index([treeId])
+}
+
+// Directed edge: parent -> child. A child can have at most 2 (enforced in app layer).
+model ParentChild {
+  id        String @id @default(cuid())
+  parentId  String
+  childId   String
+
+  parent    PersonNode @relation("ParentLinks", fields: [parentId], references: [id], onDelete: Cascade)
+  child     PersonNode @relation("ChildLinks", fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, childId])
+}
+
+// Marriage / spousal link. A husband can have multiple wives (polygamy supported);
+// a wife is linked to one husband per marriage record (multiple records = remarriage).
+model Marriage {
+  id         String   @id @default(cuid())
+  husbandId  String
+  wifeId     String
+  year       Int?
+
+  husband    PersonNode @relation("Husband", fields: [husbandId], references: [id], onDelete: Cascade)
+  wife       PersonNode @relation("Wife", fields: [wifeId], references: [id], onDelete: Cascade)
+
+  @@unique([husbandId, wifeId])
+}
