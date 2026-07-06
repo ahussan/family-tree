@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, use as usePromise } from "react";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import TreeCanvas from "@/components/TreeCanvas";
@@ -17,8 +18,8 @@ type TreeData = {
   invites: { id: string; email: string; role: string }[];
 };
 
-export default function TreePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = usePromise(params);
+export default function TreePage() {
+  const { id } = useParams<{ id: string }>();
   const [tree, setTree] = useState<TreeData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
