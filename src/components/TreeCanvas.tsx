@@ -215,43 +215,52 @@ function Canvas({
             </div>
           )}
 
-          {selected.outgoingLinks?.length > 0 && (
-            <div className="mb-3 pt-3 border-t border-[var(--rule)]">
-              <p className="text-[10px] uppercase tracking-wide text-[var(--ink-soft)] mb-2">Linked elsewhere</p>
-              <ul className="space-y-1.5">
+          <div className="mb-3 pt-3 border-t border-[var(--rule)]">
+            <p className="text-[10px] uppercase tracking-wide text-[var(--ink-soft)] mb-2">Linked elsewhere</p>
+            {(!selected.outgoingLinks || selected.outgoingLinks.length === 0) && (
+              <p className="text-xs text-[var(--ink-soft)] mb-2">No cross-tree links.</p>
+            )}
+            {selected.outgoingLinks && selected.outgoingLinks.length > 0 && (
+              <ul className="space-y-2 mb-2">
                 {selected.outgoingLinks.map((link) => (
-                  <li key={link.id} className="flex items-center justify-between gap-2">
-                    <button
-                      onClick={() => router.push(`/tree/${link.toTreeId}`)}
-                      className="text-left text-sm text-[var(--accent)] underline underline-offset-2 truncate"
-                      title={link.label ?? undefined}
-                    >
-                      {link.toTree.name}
-                      {link.toNode ? ` — ${link.toNode.name}` : ""}
-                    </button>
-                    {canEdit && (
+                  <li key={link.id} className="rounded-md border border-[var(--rule)] p-2">
+                    <div className="flex items-start justify-between gap-2">
                       <button
-                        onClick={() => removeLink(link.id)}
-                        className="text-xs text-[var(--female-ink)] shrink-0"
-                        title="Remove link"
+                        onClick={() => router.push(`/tree/${link.toTreeId}`)}
+                        className="text-left text-sm text-[var(--accent)] underline underline-offset-2 leading-snug"
+                        title={link.label ?? undefined}
                       >
-                        ✕
+                        {link.toTree.name}
+                        {link.toNode ? ` — ${link.toNode.name}` : ""}
                       </button>
+                      {canEdit && (
+                        <button
+                          onClick={() => removeLink(link.id)}
+                          className="text-xs text-[var(--female-ink)] border border-[var(--female-ink)]/30 rounded px-1.5 py-0.5 shrink-0 hover:bg-[var(--female-fill)]/40"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                    {link.label && (
+                      <p className="text-[11px] text-[var(--ink-soft)] mt-0.5">{link.label}</p>
                     )}
                   </li>
                 ))}
               </ul>
-            </div>
-          )}
-
-          {canEdit && (
-            <div className="space-y-2">
+            )}
+            {canEdit && (
               <button
                 onClick={() => setLinking(true)}
                 className="w-full text-xs py-2 rounded-md border border-[var(--rule)] hover:border-[var(--accent)]"
               >
                 🔗 Link to another tree
               </button>
+            )}
+          </div>
+
+          {canEdit && (
+            <div className="pt-2">
               <button
                 onClick={deleteSelected}
                 className="w-full text-xs text-[var(--female-ink)] py-2 rounded-md border border-[var(--female-ink)]/30 hover:bg-[var(--female-fill)]/40"

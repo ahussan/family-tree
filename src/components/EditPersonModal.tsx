@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ApiPersonNode } from "@/lib/layout";
+import AddPersonModal from "@/components/AddPersonModal";
 
 export default function EditPersonModal({
   treeId,
@@ -26,8 +27,28 @@ export default function EditPersonModal({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Anyone in the tree except this person themselves can be picked as a parent.
-  // (The server also rejects picking a descendant, to prevent a loop.)
+  // Spouse section state
+  const [linkSpouseId, setLinkSpouseId] = useState("");
+  const [linkingSpouse, setLinkingSpouse] = useState(false);
+  const [addingNewSpouse, setAddingNewSpouse] = useState(false);
+
+  // Collect current spouse ids from both marriage lists
+  const currentSpouseIds = new Set([
+    ...person.marriagesAsHusband.map((m) => m.wifeId),
+    ...person.marriagesAsWife.map((m) => m.husbandId),
+  ]);
+
+  // All marriages keyed by spouse id for removal
+  const marriageBySpouseId = new Map<string, string>(); // spouseId -> marriageId
+  for (const m of person.marriagesAsHusband) marriageBySpouseId.set(m.wifeId, m.id);
+  for (const m of person.marriagesAsWife) marriageBySpouseId.set(m.husbandId, m.id);
+
+  // People eligible to be linked as a spouse:
+  // opposite sex, in the same tree, not already a spouse, not this person
+  const spouseCandidates = allPeople.filter(
+    (p) => p.id !== person.id && p.sex !== person.sex && !currentSpouseIds.has(p.id)
+  );
+
   const parentOptions = allPeople.filter((p) => p.id !== person.id);
 
   async function submit(e: React.FormEvent) {
@@ -55,6 +76,52 @@ export default function EditPersonModal({
       return;
     }
     onSaved();
+  }
+
+  async function linkSpouse() {
+    if (!linkSpouseId) return;
+    setLinkingSpouse(true);
+    const res = await fetch(`/api/trees/${treeId}/nodes/${person.id}/marriages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ spouseId: linkSpouseId }),
+    });
+    setLinkingSpouse(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || "Failed to link spouse.");
+      return;
+    }
+    setLinkSpouseId("");
+    onSaved();
+  }
+
+  async function removeSpouse(marriageId: string) {
+    const res = await fetch(`/api/trees/${treeId}/nodes/${person.id}/marriages/${marriageId}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || "Failed to remove spouse.");
+      return;
+    }
+    onSaved();
+  }
+
+  if (addingNewSpouse) {
+    return (
+      <AddPersonModal
+        treeId={treeId}
+        relation="SPOUSE"
+        relative={person}
+        allPeople={allPeople}
+        onClose={() => setAddingNewSpouse(false)}
+        onCreated={() => {
+          setAddingNewSpouse(false);
+          onSaved();
+        }}
+      />
+    );
   }
 
   return (
@@ -196,6 +263,70 @@ export default function EditPersonModal({
             </button>
           </div>
         </form>
+
+        {/* ── Spouses section ───────────────────────────────────────────── */}
+        <div className="mt-6 pt-5 border-t border-[var(--rule)]">
+          <p className="text-xs uppercase tracking-wide text-[var(--ink-soft)] mb-3">Spouses</p>
+
+          {currentSpouseIds.size === 0 && (
+            <p className="text-sm text-[var(--ink-soft)] mb-3">No spouses recorded.</p>
+          )}
+
+          {currentSpouseIds.size > 0 && (
+            <ul className="space-y-2 mb-3">
+              {Array.from(marriageBySpouseId.entries()).map(([spouseId, marriageId]) => {
+                const sp = allPeople.find((p) => p.id === spouseId);
+                return (
+                  <li key={marriageId} className="flex items-center justify-between gap-2">
+                    <span className="text-sm">{sp?.name ?? spouseId}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeSpouse(marriageId)}
+                      className="text-xs text-[var(--female-ink)] hover:underline shrink-0"
+                    >
+                      Remove
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {/* Link an existing person as spouse */}
+          {spouseCandidates.length > 0 && (
+            <div className="flex gap-2 mb-2">
+              <select
+                value={linkSpouseId}
+                onChange={(e) => setLinkSpouseId(e.target.value)}
+                className="flex-1 px-3 py-2 rounded-md border border-[var(--rule)] bg-white/60 text-sm focus:outline-none focus:border-[var(--accent)]"
+              >
+                <option value="">Link existing person…</option>
+                {spouseCandidates.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={!linkSpouseId || linkingSpouse}
+                onClick={linkSpouse}
+                className="px-3 py-2 rounded-md border border-[var(--rule)] text-sm hover:border-[var(--accent)] disabled:opacity-40"
+              >
+                {linkingSpouse ? "…" : "Link"}
+              </button>
+            </div>
+          )}
+
+          {/* Add a brand-new person as spouse */}
+          <button
+            type="button"
+            onClick={() => setAddingNewSpouse(true)}
+            className="w-full py-2 rounded-md border border-[var(--rule)] text-sm hover:border-[var(--accent)] transition-colors"
+          >
+            + Add new spouse
+          </button>
+        </div>
       </div>
     </div>
   );
