@@ -165,14 +165,9 @@ export function buildLayout(people: ApiPersonNode[]) {
     if (!unitMembers.has(root)) unitMembers.set(root, []);
     unitMembers.get(root)!.push(p.id);
   }
-  // Deterministic left-to-right order within a unit: males first, then by id.
+  // Deterministic left-to-right order within a unit: stable by insertion order (id).
   Array.from(unitMembers.values()).forEach((members) => {
-    members.sort((a: string, b: string) => {
-      const pa = byId.get(a)!;
-      const pb = byId.get(b)!;
-      if (pa.sex !== pb.sex) return pa.sex === "MALE" ? -1 : 1;
-      return a.localeCompare(b);
-    });
+    members.sort((a: string, b: string) => a.localeCompare(b));
   });
 
   const firstAppearanceIndex = new Map(people.map((p, i) => [p.id, i]));
