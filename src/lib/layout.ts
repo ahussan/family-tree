@@ -166,14 +166,14 @@ export function buildLayout(people: ApiPersonNode[]) {
     unitMembers.get(root)!.push(p.id);
   }
   // Deterministic left-to-right order within a unit: males first, then by id.
-  for (const members of unitMembers.values()) {
-    members.sort((a, b) => {
+  Array.from(unitMembers.values()).forEach((members) => {
+    members.sort((a: string, b: string) => {
       const pa = byId.get(a)!;
       const pb = byId.get(b)!;
       if (pa.sex !== pb.sex) return pa.sex === "MALE" ? -1 : 1;
       return a.localeCompare(b);
     });
-  }
+  });
 
   const firstAppearanceIndex = new Map(people.map((p, i) => [p.id, i]));
   // A unit's generation is the maximum gen of its members (the most-ancestral
@@ -186,7 +186,7 @@ export function buildLayout(people: ApiPersonNode[]) {
   // We process bottom-to-top: when ordering gen=N, gen=N-1 children are already
   // ordered, so we use a child-barycenter heuristic to keep parents above children.
   const rows = new Map<number, string[]>(); // generation -> unit roots
-  for (const root of new Set(people.map((p) => uf.find(p.id)))) {
+  for (const root of Array.from(new Set(people.map((p) => uf.find(p.id))))) {
     const g = unitGeneration(root);
     if (!rows.has(g)) rows.set(g, []);
     rows.get(g)!.push(root);
