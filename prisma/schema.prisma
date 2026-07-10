@@ -57,6 +57,7 @@ model Tree {
   members     TreeMember[]
   nodes       PersonNode[]
   invites     Invite[]
+  linkedFrom  TreeLink[]
 }
 
 // Join table: which users can access which trees, and with what permission.
@@ -116,6 +117,11 @@ model PersonNode {
   // Marriages where this node is the wife
   marriagesAsWife    Marriage[] @relation("Wife")
 
+  // Links this node points at, in another tree the user has access to
+  outgoingLinks TreeLink[] @relation("LinkSource")
+  // Links from other trees that point at this node
+  incomingLinks TreeLink[] @relation("LinkTarget")
+
   @@index([treeId])
 }
 
@@ -143,4 +149,23 @@ model Marriage {
   wife       PersonNode @relation("Wife", fields: [wifeId], references: [id], onDelete: Cascade)
 
   @@unique([husbandId, wifeId])
+}
+
+// A reference from a person in one tree to a related tree (and optionally a specific
+// person in it) that the same user has permission to view — e.g. "this person's birth
+// family is recorded in my cousin's tree." Lets users navigate across trees they can access.
+model TreeLink {
+  id         String   @id @default(cuid())
+  fromNodeId String
+  toTreeId   String
+  toNodeId   String?
+  label      String?
+  createdAt  DateTime @default(now())
+
+  fromNode   PersonNode  @relation("LinkSource", fields: [fromNodeId], references: [id], onDelete: Cascade)
+  toTree     Tree        @relation(fields: [toTreeId], references: [id], onDelete: Cascade)
+  toNode     PersonNode? @relation("LinkTarget", fields: [toNodeId], references: [id], onDelete: SetNull)
+
+  @@index([fromNodeId])
+  @@index([toTreeId])
 }

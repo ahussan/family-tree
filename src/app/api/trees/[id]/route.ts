@@ -3,8 +3,8 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getTreeAccess } from "@/lib/access";
 
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export async function GET(req: Request, { params }: { params: { id: string } }) {
+  const { id } = params;
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -20,6 +20,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
           childLinks: true, // this node as parent
           marriagesAsHusband: true,
           marriagesAsWife: true,
+          outgoingLinks: {
+            include: {
+              toTree: { select: { id: true, name: true } },
+              toNode: { select: { id: true, name: true } },
+            },
+          },
         },
       },
       members: { include: { user: { select: { id: true, name: true, email: true } } } },
@@ -32,8 +38,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   return NextResponse.json({ ...tree, myRole: role });
 }
 
-export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+  const { id } = params;
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -51,8 +57,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   return NextResponse.json(tree);
 }
 
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+  const { id } = params;
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
