@@ -351,20 +351,9 @@ export function buildLayout(people: ApiPersonNode[]) {
   });
 
   // --- 5. Edges -----------------------------------------------------------
-  // Group parent-child links by child. When multiple parents of the same child
-  // belong to the same family unit (i.e. they are married to each other), emit
-  // only ONE edge for that unit→child pair instead of one edge per parent.
-  // This avoids duplicate parallel lines between a couple and their shared child.
   const parentChildEdges: { id: string; source: string; target: string }[] = [];
-  // key: "<unitRoot>-><childId>", value: the first link id seen (for stable edge id)
-  const seenUnitToChild = new Map<string, string>();
   for (const p of people) {
     for (const link of p.parentLinks) {
-      if (!byId.has(link.parentId)) continue; // parent not in this tree
-      const unitRoot = uf.find(link.parentId);
-      const key = `${unitRoot}->${link.childId}`;
-      if (seenUnitToChild.has(key)) continue; // already emitted an edge for this unit→child
-      seenUnitToChild.set(key, link.id);
       parentChildEdges.push({ id: `pc-${link.id}`, source: link.parentId, target: link.childId });
     }
   }
